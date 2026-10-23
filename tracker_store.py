@@ -26,6 +26,7 @@ class Store:
                 CREATE TABLE IF NOT EXISTS imports(source TEXT NOT NULL, row_key TEXT NOT NULL, payload TEXT NOT NULL, PRIMARY KEY(source,row_key));
                 CREATE TABLE IF NOT EXISTS metadata(key TEXT PRIMARY KEY, value TEXT NOT NULL);
                 CREATE INDEX IF NOT EXISTS observations_asset_time ON observations(asset,timestamp);
+                CREATE INDEX IF NOT EXISTS forecasts_issue_time ON forecasts(timestamp);
             ''')
 
     @contextmanager
@@ -174,7 +175,7 @@ def performance(db, horizon='24h'):
     eligible = [f for f in records if horizon in f.get('predicted_ranges', {})]
     scored = [(f, f.get('evaluations', {}).get(horizon)) for f in eligible]
     scored = [(f, e) for f, e in scored if e and e.get('status') == 'scored' and e.get('version') == 2]
-    stats = {'total': len(scored), 'eligible': len(eligible), 'unscored': len(eligible)-len(scored), 'horizon': horizon,
+    stats = {'all_forecasts': len(records), 'total': len(scored), 'eligible': len(eligible), 'unscored': len(eligible)-len(scored), 'horizon': horizon,
              'archived_legacy_results': sum(bool(f.get('legacy_evaluation')) for f in records),
              'wins': sum(e['direction_result'] == 'WIN' for f, e in scored)}
     stats.update(losses=stats['total']-stats['wins'], neutral=0,

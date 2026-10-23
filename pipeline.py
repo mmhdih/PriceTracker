@@ -17,7 +17,11 @@ def produce(snapshot, store=None, output=FORECAST_PATH, json_output=FORECAST_JSO
     store.observe(snapshot['collection_time'], snapshot['prices'])
     store.evaluate()
     record = build_forecast(snapshot)
-    text = render(record, store.export())
+    db = store.export()
+    # Include this analysis once in the displayed total before its text is saved.
+    if not any(f['id'] == record['id'] for f in db['forecasts']):
+        db['forecasts'].append(record)
+    text = render(record, db)
     record['forecast_text'] = text
     record['text_sha256'] = hashlib.sha256(text.encode()).hexdigest()
     # SQLite forecast write is transactional and deduplicated across all entrypoints.

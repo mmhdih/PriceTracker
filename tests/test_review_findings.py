@@ -114,6 +114,20 @@ class StoreTests(unittest.TestCase):
                 raise RuntimeError('interruption')
         self.assertEqual(len(self.store.export()['forecasts']),1)
 
+    def test_full_history_count_and_win_rate_beyond_old_limits(self):
+        with self.store.connection() as con:
+            for i in range(2,2102):
+                self.store.put(raw(START+timedelta(days=i),forecast_text=f'forecast {i}'),con)
+        self.store.observe((START+timedelta(hours=24)).isoformat(), {'mazneh':105})
+        self.store.evaluate(START+timedelta(hours=24))
+        before=performance(self.store.export())
+        self.assertEqual(before['all_forecasts'],2101)
+        self.assertEqual(before['total'],1)
+        self.assertEqual(before['win_rate'],100)
+        self.store.evaluate(START+timedelta(hours=24))
+        after=performance(self.store.export())
+        self.assertEqual(after,before)
+
     def test_concurrent_writers_preserve_all_forecasts(self):
         def put(i):
             self.store.put(raw(START+timedelta(days=i),forecast_text=f'forecast {i}'))
@@ -218,6 +232,8 @@ class AnalysisTests(unittest.TestCase):
             a=produce(s,store,base/'report.txt',base/'report.json')
             b=produce(s,store,base/'report.txt',base/'report.json')
             self.assertEqual(a['id'],b['id'])
+            self.assertIn('تعداد کل تحلیل‌های یکتا: ۱', a['forecast_text'])
+            self.assertEqual(a['forecast_text'],b['forecast_text'])
             self.assertEqual(len(store.export()['forecasts']),1)
 
     def test_all_generation_entrypoints_use_same_template(self):
