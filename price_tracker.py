@@ -19,41 +19,31 @@ import jdatetime
 from datetime import datetime, timezone, timedelta
 
 # --- daily history storage --------------------------------------------------
-DAILY_DB_PATH = "/root/gold-tracker-bot/daily_prices.json"
+from config import DATA_DIR
+from safe_json import read_json, save_json, update_json
+DAILY_DB_PATH = str(DATA_DIR / "daily_prices.json")
 
 TZ_TEHRAN = timezone(timedelta(hours=3, minutes=30))
 
 
 def _load_daily_db() -> dict:
-    if not os.path.exists(DAILY_DB_PATH):
-        return {"days": {}}
-    try:
-        with open(DAILY_DB_PATH, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except Exception:
-        return {"days": {}}
+    return read_json(DAILY_DB_PATH, {"days": {}})
 
 
 def _save_daily_db(db: dict) -> None:
-    with open(DAILY_DB_PATH, "w", encoding="utf-8") as f:
-        json.dump(db, f, ensure_ascii=False, indent=2)
+    save_json(DAILY_DB_PATH, db)
 
 
 def _save_price_to_daily(prices: dict) -> None:
-    db = _load_daily_db()
-    today = jdatetime.datetime.now(TZ_TEHRAN).strftime("%Y-%m-%d")
-    if today not in db["days"]:
-        db["days"][today] = []
-    entry = {
-        "time": jdatetime.datetime.now(TZ_TEHRAN).strftime("%H:%M"),
-        "prices": prices,
-    }
-    db["days"][today].append(entry)
-    all_days = sorted(db["days"].keys())
-    if len(all_days) > 7:
-        for old_day in all_days[:-7]:
-            del db["days"][old_day]
-    _save_daily_db(db)
+    now = jdatetime.datetime.now(TZ_TEHRAN)
+    today = now.strftime("%Y-%m-%d")
+    def append(db):
+        db["days"].setdefault(today, []).append({"time": now.strftime("%H:%M"), "prices": prices})
+        for day in sorted(db["days"])[:-7]:
+            del db["days"][day]
+    update_json(DAILY_DB_PATH, {"days": {}}, append)
+    from tracker_store import get_store
+    get_store().observe(datetime.now(TZ_TEHRAN).isoformat(), prices, 'price-tracker')
 
 
 # --- تنظیمات کانال و توکن ربات ------------------------------------------------
@@ -286,11 +276,12 @@ def _scrape_naghdp_deal() -> tuple[str | None, str | None, str | None]:
 # --- Telegram sender ---------------------------------------------------------
 
 def send_to_telegram(text: str) -> bool:
+    if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
+        raise ValueError("Configure TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID")
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
     payload = {
         "chat_id": TELEGRAM_CHAT_ID,
         "text": text,
-        "parse_mode": "Markdown",
         "disable_web_page_preview": True,
     }
     data = json.dumps(payload).encode("utf-8")
@@ -309,11 +300,12 @@ def send_to_telegram(text: str) -> bool:
 
 
 def send_and_pin_to_telegram(text: str) -> bool:
+    if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
+        raise ValueError("Configure TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID")
     url_send = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
     payload = {
         "chat_id": TELEGRAM_CHAT_ID,
         "text": text,
-        "parse_mode": "Markdown",
         "disable_web_page_preview": True,
     }
     data = json.dumps(payload).encode("utf-8")
@@ -355,7 +347,7 @@ def _get_morning_price(db: dict, grade: str) -> int | None:
     """پیدا کردن اولین قیمت امروز (قیمت صبح) — اولین entry که کلید grade را داشته باشد"""
     today = jdatetime.datetime.now(TZ_TEHRAN).strftime("%Y-%m-%d")
     for day_key in sorted(db.get("days", {}).keys(), reverse=True):
-        if day_key >= today:
+        if day_key == today:
             for entry in db["days"][day_key]:
                 val = entry["prices"].get(grade)
                 if val is not None and val > 0:

@@ -26,7 +26,7 @@ from datetime import datetime, timezone, timedelta
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import sys
-sys.path.append('/usr/local/lib/python3.10/dist-packages')
+
 import jdatetime
 from price_tracker import (
     _fetch_tala_price, TALA_IR_MAZNEH, TALA_IR_18K,
@@ -104,7 +104,7 @@ def _compute_technicals(history: list[dict]) -> dict:
         avg_gain = sum(gains) / 14
         avg_loss = sum(losses) / 14
         if avg_loss == 0:
-            rsi = 100
+            rsi = 100 if avg_gain > 0 else 50
         else:
             rs = avg_gain / avg_loss
             rsi = 100 - (100 / (1 + rs))
@@ -143,12 +143,12 @@ def _get_calendar_info() -> dict:
     today_str = now.strftime("%Y-%m-%d")
 
     # Persian weekday names
-    weekday_names = ["دوشنبه", "سه‌شنبه", "چهارشنبه", "پنجشنبه", "جمعه", "شنبه", "یکشنبه"]
+    weekday_names = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه", "چهارشنبه", "پنجشنبه", "جمعه"]
     weekday_name = weekday_names[now.weekday()]
 
     # Check if today/ Tomorrow is Thursday (market close day)
-    is_thursday = now.weekday() == 3  # Thursday in jdatetime
-    is_friday = now.weekday() == 4   # Friday (holiday)
+    is_thursday = now.weekday() == 5  # Thursday in jdatetime
+    is_friday = now.weekday() == 6   # Friday (holiday)
 
     # Time of day
     hour = now.hour
@@ -316,11 +316,13 @@ def collect(no_news: bool = False, technical: bool = False) -> dict:
         geram18_history = _fetch_tgju_history("geram18", length=30)
         if geram18_history:
             result["geram18_technicals"] = _compute_technicals(geram18_history)
+            result["geram18_history"] = geram18_history
 
         # Mesghal history
         mesghal_history = _fetch_tgju_history("mesghal", length=30)
         if mesghal_history:
             result["mazneh_technicals"] = _compute_technicals(mesghal_history)
+            result["mazneh_history"] = mesghal_history
             result["mazneh_recent_7d"] = mesghal_history[:7]
     else:
         # Always include at least 7-day history for context
@@ -334,7 +336,7 @@ def collect(no_news: bool = False, technical: bool = False) -> dict:
     # Dollar 7-day history and technicals (using robust HTML scraper)
     try:
         from generate_dollar_forecast import _fetch_dollar_history_html
-        dollar_history_30 = _fetch_dollar_history_html(length=30)
+        dollar_history_30 = list(reversed(_fetch_dollar_history_html(length=30)))  # collector histories newest first
         if dollar_history_30:
             result["dollar_recent_7d"] = dollar_history_30[:7]
             if technical:
@@ -402,14 +404,13 @@ def main():
 
     json_output = json.dumps(data, ensure_ascii=False, indent=2)
 
-    output_path = "/tmp/gold_collector_output.json"
-    try:
-        with open(output_path, "w", encoding="utf-8") as f:
-            f.write(json_output)
-        print(f"[collector] Saved to {output_path}", file=sys.stderr)
-    except Exception as e:
-        print(f"[collector] Save error: {e}", file=sys.stderr)
-
+    from config import COLLECTOR_PATH
+    from safe_json import atomic_write
+    from tracker_store import get_store
+    from analysis_engine import validate_snapshot
+    data = validate_snapshot(data)
+    get_store().observe(data['collection_time'], data['prices'])
+    atomic_write(COLLECTOR_PATH, json.dumps(data, ensure_ascii=False, indent=2))
     print(json_output)
     print(f"\n[collector] Done. Sources: {len(data)} sections", file=sys.stderr)
 

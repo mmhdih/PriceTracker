@@ -134,11 +134,17 @@ def main() -> int:
 
     if not last_prices:
         last_prices = live_fallback
-        baseline_prices = live_fallback
+        baseline_prices = {}
 
     if not last_prices:
         print("[daily] no prices available", file=sys.stderr)
         return 1
+
+    # Unit-aware formatting; ounces are USD, domestic quotes are Toman.
+    def amount(value, key):
+        unit = "دلار" if key in ("gold_ounce", "silver_ounce") else "تومان"
+        decimals = 2 if unit == "دلار" else 0
+        return _fa_digits(f"{value:,.{decimals}f}") + " " + unit
 
     # ساخت پیام — فرمت Markdown
     lines = []
@@ -147,8 +153,13 @@ def main() -> int:
     lines.append("")
 
     for label, key, emoji in DAILY_KEYS:
-        base_val = baseline_prices.get(key) or last_prices.get(key)
-        last_val = last_prices.get(key) or base_val
+        base_val = baseline_prices.get(key)
+        last_val = last_prices.get(key)
+        if last_val and not base_val:
+            lines.append(f"{emoji} **{label}**: {amount(last_val, key)}")
+            lines.append("   مبنای مقایسه روزانه موجود نیست")
+            lines.append("")
+            continue
 
         if not base_val or not last_val:
             lines.append(f"{emoji} **{label}**: `—`")
@@ -169,20 +180,21 @@ def main() -> int:
         else:
             arrow = "➖"
 
-        base_disp = _fmt_fa(int(base_val))
-        last_disp = _fmt_fa(int(last_val))
-        change_disp = _fa_digits(f"{int(change):+,}".replace(",", "،"))
+        base_disp = amount(base_val, key)
+        last_disp = amount(last_val, key)
+        change_disp = amount(abs(change), key)
+        change_disp = ("+" if change >= 0 else "-") + change_disp
         pct_disp = _fa_digits(f"{pct:+.2f}")
 
         lines.append(f"{emoji} **{label}**")
-        lines.append(f"   اولین تغییر ({baseline_time}): `{base_disp}` تومان")
+        lines.append(f"   اولین تغییر ({baseline_time}): `{base_disp}`")
         if key == "geram18" and min_g and max_g:
             min_val, min_time = min_g
             max_val, max_time = max_g
-            lines.append(f"   📉 پایین‌ترین قیمت ({_fa_digits(min_time)}): `{_fmt_fa(min_val)}` تومان")
-            lines.append(f"   📈 بالاترین قیمت ({_fa_digits(max_time)}): `{_fmt_fa(max_val)}` تومان")
-        lines.append(f"   الان ({last_time}): `{last_disp}` تومان")
-        lines.append(f"   نوسان: `{change_disp}` تومان ({pct_disp}%) {arrow}")
+            lines.append(f"   📉 پایین‌ترین قیمت ({_fa_digits(min_time)}): `{amount(min_val, key)}`")
+            lines.append(f"   📈 بالاترین قیمت ({_fa_digits(max_time)}): `{amount(max_val, key)}`")
+        lines.append(f"   الان ({last_time}): `{last_disp}`")
+        lines.append(f"   نوسان: `{change_disp}` ({pct_disp}%) {arrow}")
         lines.append("")
 
     msg = "\n".join(lines)

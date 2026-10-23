@@ -1,46 +1,49 @@
-# PriceTracker — Gold Tracker
+# PriceTracker
 
-Imported from `gold-tracker-system.zip` on 2026-10-23. Python scripts collect Iranian gold/forex quotes, build reports, store JSON history, and communicate with Telegram. The source contains experimental and legacy workflows; it is **not ready for unattended production use**. Read [REVIEW_FA.md](REVIEW_FA.md) before running it.
+Gold/forex collection, a single Persian analysis template, and a unified transactional forecast history. This version repairs the review findings except finance sender authorization, which was explicitly deferred by the owner.
 
-## Import contents
+## Run locally
 
-The two ZIP folders were combined into a single project root. Identical code was deduplicated; `generate_analysis.py`, present only in `gold-tracker-package`, was retained. The original archive is unchanged. `IMPORT_MANIFEST.json` records source hashes and publication changes.
-
-Embedded Telegram bot tokens and the channel ID were replaced by environment variables. All four runtime JSON databases were excluded from this public repository, including personal finance records. No historical performance claims from the archive were independently validated. Original internal-use licensing was retained: no open-source license is granted by this upload.
-
-## Install and configure
-
-Requires Python 3.10 or newer. Offline review was run with Python 3.12.
+Requires Python 3.10+. Validation in this workspace used Python 3.12 on Windows.
 
 ```bash
 python -m venv .venv
 source .venv/bin/activate
 python -m pip install -r requirements.txt
-export TELEGRAM_BOT_TOKEN='your-token'
-export TELEGRAM_CHAT_ID='your-channel-id'
-export FINANCE_BOT_TOKEN='your-finance-token'
-```
-
-`.env.example` lists the settings; scripts read the process environment and do not load `.env` files automatically. Missing credentials must be configured before using Telegram functions. The finance listener currently lacks sender authorization; do not enable it until finding P1-02 is fixed.
-
-## Existing path assumptions
-
-This import preserves the original `/root/gold-tracker-bot` and `/tmp` paths. To run unchanged on Linux, place the checkout at `/root/gold-tracker-bot`. Other locations and Windows need path refactoring. Runtime databases are initialized by their respective code when absent, but the containing directory must exist. Original history remains in the local ZIP and was not published.
-
-```bash
-# Fetches external data and writes /tmp/gold_collector_output.json:
-python collector.py --technical
-
-# Builds /tmp/final_forecast.txt; contains fixed claims and ranges (see review):
-python generate_analysis.py
-```
-
-`price_tracker.py` sends Telegram messages; `daily_summary_bot.py` sends and pins messages; `finance_bot_listener.py` starts continuous polling. No live Telegram operations were performed during review. Cron installation, deployment, model integration, and live market source validation are not included in this import. The archive's cron examples do not define a complete collector-to-LLM-to-publication system.
-
-## Offline review evidence
-
-```bash
 python -m unittest discover -s tests -v
 ```
 
-The tests are characterization tests: a passing test confirms that a documented defect was reproduced. They do not mean the system is production-correct. Requests, messages, and DB writes are mocked or confined to temporary files. See [REVIEW_FA.md](REVIEW_FA.md) for priorities and remediation.
+Set `GOLD_DATA_DIR` to your private runtime-data directory, and export `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, and `FINANCE_BOT_TOKEN` when needed. `.env` files are not automatically loaded. `GOLD_RUNTIME_DIR` defaults to the OS temporary directory, preserving `/tmp/gold_collector_output.json`, `/tmp/final_forecast.txt` and `/tmp/final_forecast.json` on Linux.
+
+**Before using old data, run the merge** (see [SERVER_UPGRADE_FA.md](SERVER_UPGRADE_FA.md)). Both old databases are merged into `tracker.sqlite3`; original JSON files remain unchanged. Never publish data directories, backups or bot credentials.
+
+```bash
+# Preview, no changes to source databases:
+python migrate_databases.py --source-dir /path/to/old-data
+# Backup and merge:
+python migrate_databases.py --source-dir /path/to/old-data --apply
+# Fresh collection + evaluation + report + structured forecast, no Telegram send:
+python cron_run_v2.py
+# Explicitly send the resulting analysis:
+python cron_run_v2.py --publish
+```
+
+## One store, one template
+
+`rich_db.py` and `json_db.py` retain legacy function names but read/write the same SQLite database. New forecasts, observations and results use transactions. The import archives all raw source objects, including old lessons and evaluation results; duplicate forecasts with identical text and price sets within two minutes are combined. Imported old evaluations are retained separately and excluded from new performance statistics. Repeating a merge does not duplicate history.
+
+Forecasts are evaluated independently at 4h, 24h and 1w. The endpoint is the **first observation at or after the due time**, within 30 minutes (configurable via `GOLD_EVALUATION_TOLERANCE_SECONDS`). Missing endpoint data stays unscored; a later live quote is never substituted for a historical endpoint. Missing results may be filled if actual historical observations are imported later. Scored results are immutable. Direction uses a 0.3% threshold; sideways outside that threshold is a loss. Signal scoring, when an external signal exists, measures price direction before transaction costs and is not a realized trading return.
+
+All report generation script names (`generate_analysis.py`, `generate_final.py`, `generate_report.py`, `generate_forecast.py`, `generate_dollar_forecast.py`) use one renderer and consume the collector JSON. `analyze.py`, `cron_run_v2.py` and `cron_run.sh` collect fresh inputs first. The two saver scripts now share one saver and store one forecast, rather than writing competing databases. Generated reports get a stable ID and a checksum-bound JSON sidecar. `save_final_forecast.py` and `save_rich_forecast.py` can accept the sidecar directly.
+
+The report's baseline model derives endpoint ranges from mean and standard deviation of log returns over at least seven daily closes. It is an **uncalibrated statistical baseline**, not an LLM prediction or validated investment strategy. No fixed news, historical claims, BUY recommendation, or fabricated confidence percentage is emitted. An external analyst/LLM can supply structured forecasts via `forecast_io.py`; the model, asset, timestamp and ranges must be explicit. See [ANALYSIS_TEMPLATE_FA.md](ANALYSIS_TEMPLATE_FA.md).
+
+Daily ticks and finance records retain JSON format with kernel file locks, atomic replacement, corruption detection and a backup of the last valid file. Finance access control remains unchanged. `self_improve.py` reports only validated horizon results and does not automatically tune trading thresholds.
+
+## Verification and limits
+
+24 offline regression tests cover horizon timing, scoring, migration idempotency, preservation of originals and raw history, transaction rollback, concurrent SQLite writers, concurrent JSON writers, corrupt inputs, source freshness, units, seven weekdays, common templates and repeated saver calls. GitHub Actions is configured for Linux/Windows with Python 3.10/3.12; results there must be checked after upload.
+
+A local merge of both ZIP folders read 650 source forecast rows (the two database copies overlap), preserved **324 unique forecasts**, and produced **8,489 observation timestamps**. No invalid forecast rows were discarded. Repeating it produced the same counts and SQLite integrity check returned `ok`. These are validation results for the provided ZIP, not current server data. The private merged database is deliberately not in GitHub.
+
+No VPS changes, real Telegram sends, or live market-source checks were performed. Live source access, bot credentials and scheduling still need a controlled server smoke test. Start with [the server upgrade guide](SERVER_UPGRADE_FA.md). Internal-use licensing from the original project is unchanged; no open-source license is granted by this upload.

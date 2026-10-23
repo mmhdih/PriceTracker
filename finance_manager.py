@@ -15,7 +15,9 @@ import re
 from datetime import datetime, timezone, timedelta
 import jdatetime
 
-FINANCE_DB_PATH = "/root/gold-tracker-bot/finance_db.json"
+from config import DATA_DIR
+from safe_json import read_json, save_json, update_json
+FINANCE_DB_PATH = str(DATA_DIR / "finance_db.json")
 TZ_TEHRAN = timezone(timedelta(hours=3, minutes=30))
 
 DEFAULT_DB = {
@@ -27,18 +29,11 @@ DEFAULT_DB = {
 
 
 def load_finance_db() -> dict:
-    if not os.path.exists(FINANCE_DB_PATH):
-        return DEFAULT_DB
-    try:
-        with open(FINANCE_DB_PATH, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except Exception:
-        return DEFAULT_DB
+    return read_json(FINANCE_DB_PATH, DEFAULT_DB)
 
 
 def save_finance_db(db: dict) -> None:
-    with open(FINANCE_DB_PATH, "w", encoding="utf-8") as f:
-        json.dump(db, f, ensure_ascii=False, indent=2)
+    save_json(FINANCE_DB_PATH, db)
 
 
 def add_transaction(amount: int, tx_type: str, category: str, description: str) -> dict:
@@ -47,12 +42,11 @@ def add_transaction(amount: int, tx_type: str, category: str, description: str) 
     tx_type: 'income' یا 'expense'
     category: دسته‌بندی (مثلاً: خوراک، خودرو، تفریح، طلا، حقوق و ...)
     """
-    db = load_finance_db()
     now_tehran = datetime.now(TZ_TEHRAN)
     shamsi_date = jdatetime.datetime.fromgregorian(datetime=now_tehran)
     
     entry = {
-        "id": len(db["transactions"]) + 1,
+        "id": None,
         "timestamp": now_tehran.isoformat(),
         "date_shamsi": shamsi_date.strftime("%Y/%m/%d"),
         "month_shamsi": shamsi_date.strftime("%Y/%m"),
@@ -62,25 +56,28 @@ def add_transaction(amount: int, tx_type: str, category: str, description: str) 
         "category": category,
         "description": description
     }
-    db["transactions"].append(entry)
-    save_finance_db(db)
-    return entry
+    def append(db):
+        entry['id'] = max((t['id'] for t in db['transactions']), default=0) + 1
+        db['transactions'].append(entry)
+        return entry
+    return update_json(FINANCE_DB_PATH, DEFAULT_DB, append)
 
 
 def add_financial_goal(name: str, target_amount: int, deadline_shamsi: str) -> dict:
     """ثبت یک هدف مالی کوتاه مدت یا بلند مدت."""
-    db = load_finance_db()
     goal = {
-        "id": len(db["goals"]) + 1,
+        "id": None,
         "name": name,
         "target_amount": target_amount,
         "deadline": deadline_shamsi,
         "saved_amount": 0,
         "status": "active"  # active, achieved, failed
     }
-    db["goals"].append(goal)
-    save_finance_db(db)
-    return goal
+    def append(db):
+        goal['id'] = max((g['id'] for g in db['goals']), default=0) + 1
+        db['goals'].append(goal)
+        return goal
+    return update_json(FINANCE_DB_PATH, DEFAULT_DB, append)
 
 
 def get_monthly_report(month_str: str | None = None) -> str:
@@ -156,15 +153,4 @@ def get_monthly_report(month_str: str | None = None) -> str:
 
 
 if __name__ == "__main__":
-    # اجرای تست تست دستی
-    db = load_finance_db()
-    if not db["transactions"]:
-        # تراکنش‌های فرضی برای تست اولیه
-        add_transaction(45000000, "income", "حقوق", "درآمد دیجی کالا")
-        add_transaction(12000000, "expense", "مسکن", "اجاره خانه")
-        add_transaction(4000000, "expense", "خوراک", "خرید سوپرمارکتی")
-        add_transaction(6000000, "expense", "تفریح", "رستوران و کافه گردی")
-        add_transaction(15000000, "expense", "طلا", "خرید طلای آبشده برای پس‌انداز")
-        add_financial_goal("خرید ۱۰۰ گرم طلای ۱۸ عیار آبشده", 350000000, "1405/12/29")
-        
     print(get_monthly_report())
