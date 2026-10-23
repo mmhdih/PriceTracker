@@ -19,6 +19,36 @@ exec(compile(HELPER,'safe_update.sh:helper','exec'),UPDATER)
 
 
 class UpdaterTests(unittest.TestCase):
+    def test_activate_without_preparation_has_clear_error(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            with self.assertRaisesRegex(RuntimeError,'No successful preparation exists'):
+                UPDATER['activate'](argparse.Namespace(),root/'live',root)
+
+    def test_rollback_and_recover_without_upgrade_are_noops(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            UPDATER['rollback'](argparse.Namespace(),root/'live',root)
+            UPDATER['recover'](argparse.Namespace(),root/'live',root)
+            self.assertEqual(list(root.iterdir()),[])
+
+    def test_unknown_entrypoint_is_retained_and_identified(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp);old=root/'old';old.mkdir();new=root/'new';new.mkdir()
+            custom=old/'gen_forecast_script.py';custom.write_text('print("custom")')
+            self.assertEqual(UPDATER['custom_entrypoints'](old,new),['gen_forecast_script.py'])
+            self.assertEqual(custom.read_text(),'print("custom")')
+
+    def test_confirmed_server_output_is_copied_without_changing_original(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp);source=root/'source';source.mkdir();release=root/'release';(release/'live').mkdir(parents=True);data=release/'data';data.mkdir()
+            original=source/'final_forecast_output.txt';original.write_text('old report',encoding='utf-8')
+            with patch.object(Path,'symlink_to') as link:
+                UPDATER['preserve_output_files'](source,release,data)
+            self.assertEqual(original.read_text(),'old report')
+            self.assertEqual((data/'final_forecast_output.txt').read_text(),'old report')
+            link.assert_called_once_with(data/'final_forecast_output.txt')
+
     def test_extract_rejects_parent_traversal(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp);archive=root/'source.zip'

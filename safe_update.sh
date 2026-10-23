@@ -237,7 +237,34 @@ def shlex_quote(text):
     return shlex.quote(str(text))
 
 
+def preserve_output_files(source, release, data):
+    # This server-specific output was confirmed in the production file listing.
+    # Preserve its old public path; it may be a scheduler redirection target.
+    source,release,data=Path(source),Path(release),Path(data)
+    for name in ('final_forecast_output.txt',):
+        original=source/name
+        if not original.exists():
+            continue
+        if not original.is_file():
+            raise RuntimeError('Expected regular output file: '+name)
+        before=(original.stat().st_size,original.stat().st_mtime_ns)
+        shutil.copy2(original,data/name)
+        after=(original.stat().st_size,original.stat().st_mtime_ns)
+        if before!=after:
+            raise RuntimeError('Output changed during copy; pause its writer and retry')
+        (release/'live'/name).symlink_to(data/name)
+
+
+def custom_entrypoints(source, code):
+    return sorted(p.name for p in Path(source).iterdir()
+                  if p.suffix in ('.py','.sh') and not (Path(code)/p.name).exists()
+                  and p.name not in ('_deployment_bootstrap.py','safe_update.sh'))
+
+
 def prepare(args, live, state):
+    # A failed new attempt must not leave an older prepared release activatable.
+    if (state/'prepared.json').exists():
+        os.replace(state/'prepared.json',state/('prepared-superseded-'+uuid.uuid4().hex+'.json'))
     source=live.resolve()
     active=read(state/'active.json') if (state/'active.json').exists() else None
     source_data=Path(args.data_dir).resolve() if args.data_dir else Path(active['data']) if active else Path(os.environ.get('GOLD_DATA_DIR',str(source))).resolve()
@@ -258,9 +285,9 @@ def prepare(args, live, state):
             stream.write(chunk)
     code=release/'code'
     extract_archive(archive,code,PINNED_COMMIT)
-    unknown=[p.name for p in source.iterdir() if p.suffix in ('.py','.sh') and not (code/p.name).exists() and p.name not in ('_deployment_bootstrap.py','safe_update.sh')]
+    unknown=custom_entrypoints(source,code)
     if unknown:
-        raise RuntimeError('Custom entrypoints need manual integration: '+', '.join(unknown))
+        raise RuntimeError('Custom entrypoints need review before integration: '+', '.join(unknown)+'. Preparation did not complete; do not activate or delete these files.')
     if shutil.disk_usage(state).free<300*1024*1024:
         raise RuntimeError('At least 300 MiB free disk space is required')
     log=release/'checks.log'
@@ -311,12 +338,17 @@ def restore_journal(live, state, journal):
 
 
 def activate(args, live, state):
+    if not (state/'prepared.json').exists():
+        raise RuntimeError('No successful preparation exists. The live installation was not upgraded. Resolve the prepare error and run prepare again before activate.')
     prepared=read(state/'prepared.json')
     if prepared['live']!=str(live) or live.resolve()!=Path(prepared['source']):
         raise RuntimeError('Live source changed since prepare; prepare again')
     release=Path(prepared['release'])
     if not within(release,state/'releases') or read(release/'manifest.json')['status']!='prepared':
         raise RuntimeError('Invalid prepared release')
+    unknown=custom_entrypoints(live.resolve(),release/'code')
+    if unknown:
+        raise RuntimeError('Custom entrypoints appeared since prepare; live remains unchanged: '+', '.join(unknown))
     previous=read(state/'active.json') if (state/'active.json').exists() else None
     paths=[live,prepared['source_data'],prepared['source']]+([previous['release']] if previous else [])
     quiescent(args,paths)
@@ -342,6 +374,7 @@ def activate(args, live, state):
     if live_runtime.exists() and not live_runtime.is_dir():
         raise ValueError('GOLD_RUNTIME_DIR must be a directory')
     build_launchers(release,release/'data',live_runtime,secrets)
+    preserve_output_files(live.resolve(),release,release/'data')
     quiescent(args,paths)
     journal={'new_live':str(release/'live'),'previous_active':previous,'previous_kind':'symlink' if live.is_symlink() else 'directory',
              'previous_link':os.readlink(live) if live.is_symlink() else None,'original_directory':str(backup/'original-directory'),
@@ -376,6 +409,9 @@ def activate(args, live, state):
 
 
 def rollback(args, live, state):
+    if not (state/'active.json').exists():
+        print('NOTHING TO ROLL BACK. No updater-managed release was activated; the existing installation is unchanged.')
+        return
     active=read(state/'active.json')
     if live.resolve()!=Path(active['release'])/'live':
         raise RuntimeError('Live link changed externally; refusing rollback')
@@ -388,6 +424,9 @@ def rollback(args, live, state):
 
 
 def recover(args, live, state):
+    if not (state/'switch-journal.json').exists():
+        print('NO INTERRUPTED SWITCH. No recovery is needed.')
+        return
     journal=read(state/'switch-journal.json')
     active=read(state/'active.json') if (state/'active.json').exists() else {}
     if journal.get('operation')!='rollback' and active and str(Path(active['release'])/'live')==journal['new_live'] and live.is_symlink() and live.resolve()==Path(journal['new_live']).resolve():

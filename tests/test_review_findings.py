@@ -243,7 +243,7 @@ class AnalysisTests(unittest.TestCase):
             source.write_text(json.dumps(snapshot(),ensure_ascii=False),encoding='utf-8')
             env={**os.environ,'GOLD_DATA_DIR':str(base/'data'),'GOLD_RUNTIME_DIR':str(base/'runtime'),'PYTHONUTF8':'1'}
             outputs=[]
-            for name in ['generate_analysis.py','generate_final.py','generate_report.py','generate_forecast.py','generate_dollar_forecast.py']:
+            for name in ['generate_analysis.py','generate_final.py','generate_report.py','generate_forecast.py','generate_dollar_forecast.py','gen_forecast_script.py']:
                 command=[sys.executable,str(ROOT/name),'--input',str(source)]
                 result=subprocess.run(command,env=env,capture_output=True,text=True,encoding='utf-8',timeout=20)
                 self.assertEqual(result.returncode,0,result.stderr)
