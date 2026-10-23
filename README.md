@@ -42,8 +42,14 @@ Daily ticks and finance records retain JSON format with kernel file locks, atomi
 
 ## Verification and limits
 
-25 offline regression tests cover horizon timing, scoring, migration idempotency, preservation of originals and raw history, transaction rollback, concurrent SQLite writers, concurrent JSON writers, corrupt inputs, source freshness, units, seven weekdays, common templates and repeated saver calls. GitHub Actions is configured for Linux/Windows with Python 3.10/3.12; results there must be checked after upload.
+25 core offline regression tests cover horizon timing, scoring, migration idempotency, preservation of originals and raw history, transaction rollback, concurrent SQLite writers, concurrent JSON writers, corrupt inputs, source freshness, units, seven weekdays, common templates and repeated saver calls. GitHub Actions is configured for Linux/Windows with Python 3.10/3.12; results there must be checked after upload.
 
 A local merge of both ZIP folders read 650 source forecast rows (the two database copies overlap), preserved **324 unique forecasts**, and produced **8,489 observation timestamps**. No invalid forecast rows were discarded. Repeating it produced the same counts and SQLite integrity check returned `ok`. These are validation results for the provided ZIP, not current server data. The private merged database is deliberately not in GitHub.
 
 No VPS changes, real Telegram sends, or live market-source checks were performed. Live source access, bot credentials and scheduling still need a controlled server smoke test. Start with [the server upgrade guide](SERVER_UPGRADE_FA.md). Internal-use licensing from the original project is unchanged; no open-source license is granted by this upload.
+
+## Safe Bash updater
+
+[safe_update.sh](safe_update.sh) prepares the pinned reviewed release in an isolated venv, tests it, merges a data copy, and supports guarded activation, rollback and interrupted-switch recovery. Default mode is **prepare only**. It never stops unrelated services or sends a Telegram test message. Activation requires the operator to pause the gold schedulers/services and pass `--quiesced`; it also refuses to switch while recognized project processes are running. Existing script paths, bot credentials and `/tmp` output paths are preserved through private compatibility launchers.
+
+Read [SAFE_UPDATE_FA.md](SAFE_UPDATE_FA.md) for exact commands and limits. Seven updater tests supplement the 25 core tests. On this Windows workspace 30 passed and two directory-symlink tests were skipped; Linux CI is configured to run those and check Bash syntax. No production VPS activation has been performed.
