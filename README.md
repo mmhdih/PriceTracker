@@ -1,5 +1,15 @@
 # PriceTracker
 
+## راهنمای فارسی و بررسی توسط Hermes
+
+- [راهنمای اصلی: معماری، نصب، ادغام، شمارنده و حدود تأیید سلامت](OPERATIONS_FA.md)
+- [مراحل بررسی زمان‌بندی، تست بدون ارسال و تشخیص تحویل تلگرام در Hermes](HERMES_RUNBOOK_FA.md)
+- [متن آماده برای سپردن بررسی به Hermes](HERMES_CHECK_PROMPT_FA.txt)
+- [بررسی چهار job اعلام‌شده: منبع قدیمی آمار، retry و مسیر ارسال](CRON_AUDIT_FA.md)
+- [ابزار read-only بررسی SQLite و تفکیک نتایج بدون نمره](tools/check_runtime.py)
+
+اگر سرور قبلاً `ACTIVATED` و تحلیل تازه داده، نصب را تکرار نکنید؛ از راهنمای بررسی شروع کنید. موفقیت اجرای دستی به‌تنهایی سلامت زمان‌بندی یا ارسال تلگرام را تأیید نمی‌کند.
+
 Gold/forex collection, a single Persian analysis template, and a unified transactional forecast history. This version repairs the review findings except finance sender authorization, which was explicitly deferred by the owner.
 
 ## Run locally
@@ -46,12 +56,12 @@ Daily ticks and finance records retain JSON format with kernel file locks, atomi
 
 A local merge of both ZIP folders read 650 source forecast rows (the two database copies overlap), preserved **324 unique forecasts**, and produced **8,489 observation timestamps**. No invalid forecast rows were discarded. Repeating it produced the same counts and SQLite integrity check returned `ok`. These are validation results for the provided ZIP, not current server data. The private merged database is deliberately not in GitHub.
 
-No VPS changes, real Telegram sends, or live market-source checks were performed. Live source access, bot credentials and scheduling still need a controlled server smoke test. Start with [the server upgrade guide](SERVER_UPGRADE_FA.md). Internal-use licensing from the original project is unchanged; no open-source license is granted by this upload.
+The workspace agent did not directly access the VPS. The owner subsequently supplied successful activation logs and a real manual report with 337 unique analyses; those are owner-provided observations at that time. Hermes scheduling, production delivery and independent market-quote validation remain unverified. Start with [the operations guide](OPERATIONS_FA.md) for an already upgraded server. Internal-use licensing from the original project is unchanged; no open-source license is granted by this upload.
 
 ## Safe Bash updater
 
 [safe_update.sh](safe_update.sh) prepares the pinned reviewed release in an isolated venv, tests it, merges a data copy, and supports guarded activation, rollback and interrupted-switch recovery. Default mode is **prepare only**. It never stops unrelated services or sends a Telegram test message. Activation requires the operator to pause the gold schedulers/services and pass `--quiesced`; it also refuses to switch while recognized project processes are running. Existing script paths, bot credentials and `/tmp` output paths are preserved through private compatibility launchers.
 
-Read [SAFE_UPDATE_FA.md](SAFE_UPDATE_FA.md) for exact commands and limits. Eleven updater tests and two private-inspection tests supplement the 25 core tests. On this Windows workspace 36 passed and two directory-symlink tests were skipped; Linux CI is configured to run those and check Bash syntax. No production VPS activation has been performed.
+Read [SAFE_UPDATE_FA.md](SAFE_UPDATE_FA.md) for exact commands and limits. Eleven updater tests, two private-inspection tests and two read-only health-check tests supplement the 25 core tests. On this Windows workspace 38 passed and two directory-symlink tests were skipped; Linux CI is configured to run those and check Bash syntax. The owner reported production activation; the workspace agent did not perform it directly.
 
 The server-specific `gen_forecast_script.py` now uses the common pipeline; its original fixed report is replaced by data-derived output. The updater also preserves the confirmed `final_forecast_output.txt` file at its original path.
