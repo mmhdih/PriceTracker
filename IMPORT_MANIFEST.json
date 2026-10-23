@@ -1,0 +1,216 @@
+{
+  "archive": "gold-tracker-system.zip",
+  "archive_sha256": "fcf74d49ee7c0d743d04c49f69afd3c065cc85248886381cb0bcebde4f9eec1e",
+  "merge_policy": "Union of code files; identical overlaps deduplicated. README replaced with verified setup notes. Runtime databases excluded from public publication.",
+  "sources": [
+    {
+      "source": "gold-tracker-package/analyze.py",
+      "source_sha256": "6176ecc6b08bbf115602a83d9d85d6698bb292bd65d98c83db7eca7b997b93c2",
+      "publication_changes": []
+    },
+    {
+      "source": "gold-tracker-package/collector.py",
+      "source_sha256": "bb9eaea42ff5e6a56a0873926acbc6b511e768b6c51ddc00b608cdf7ede3c9fe",
+      "publication_changes": []
+    },
+    {
+      "source": "gold-tracker-package/cron_run.sh",
+      "source_sha256": "537cec01848e3a91ad83868613455e8a5433d3b8507aeddfcd1c3d3a0bf4ed73",
+      "publication_changes": []
+    },
+    {
+      "source": "gold-tracker-package/cron_run_v2.py",
+      "source_sha256": "f404447edbfcb0ddd12b1173bca99ded2cd24e00dd73d2552b8d881e01ee75fa",
+      "publication_changes": []
+    },
+    {
+      "source": "gold-tracker-package/daily_summary_bot.py",
+      "source_sha256": "28a071ac31ab04dba5db5db30d3c0a4f41ac5aff52472475e546bc991af59b35",
+      "publication_changes": []
+    },
+    {
+      "source": "gold-tracker-package/finance_bot_listener.py",
+      "source_sha256": "e2b25e1ec449b3da5e31f3869115a66c01143a3a25b42169d197cedaa00a4200",
+      "publication_changes": [
+        "Bot credential moved to environment variable"
+      ]
+    },
+    {
+      "source": "gold-tracker-package/finance_manager.py",
+      "source_sha256": "b7decff650128320323403b67560d0342b55183b759fa42a7eeb61bfb49d28af",
+      "publication_changes": []
+    },
+    {
+      "source": "gold-tracker-package/generate_analysis.py",
+      "source_sha256": "b52186c9e9db4afe8fa87224711a166546d4e0d90ef4e1abd1e2f5a222bb3417",
+      "publication_changes": []
+    },
+    {
+      "source": "gold-tracker-package/generate_dollar_forecast.py",
+      "source_sha256": "5294f02e378f57ace270be48912e5cd37a57f31ad0f0a35f02129f308afbb49b",
+      "publication_changes": []
+    },
+    {
+      "source": "gold-tracker-package/generate_final.py",
+      "source_sha256": "7607b78859af63199308955597e6fe6bb0ad0669f992f70e5cb1230e349f33d6",
+      "publication_changes": []
+    },
+    {
+      "source": "gold-tracker-package/generate_forecast.py",
+      "source_sha256": "4ef4957867e8be383b631986273e7bb340f149e057bc1aaeeb3219d8f145b037",
+      "publication_changes": []
+    },
+    {
+      "source": "gold-tracker-package/generate_report.py",
+      "source_sha256": "a452d6e4ba3c16d6700407b6ef31c691dd1c2c94bacc307d7ef0dc2f7b44e78f",
+      "publication_changes": []
+    },
+    {
+      "source": "gold-tracker-package/json_db.py",
+      "source_sha256": "529f51dffbfe8c442ce3d1a3e9f4d22f09ab24f8e935dd1153c729fdccd6d8a9",
+      "publication_changes": []
+    },
+    {
+      "source": "gold-tracker-package/monitor.py",
+      "source_sha256": "911132dbf94266ebd5cbd0432e80cdd407c40c67a0badeb77eb5848de4e2d899",
+      "publication_changes": []
+    },
+    {
+      "source": "gold-tracker-package/news_scraper.py",
+      "source_sha256": "18c42ed81a1e64d247de94b660111c598794230330da7bd9d859bc541444fc2e",
+      "publication_changes": []
+    },
+    {
+      "source": "gold-tracker-package/price_tracker.py",
+      "source_sha256": "f66f60fc88a6769f14b0a02b7b99381bf09c495dfcc2b35db24814047fa84066",
+      "publication_changes": [
+        "Credentials and channel ID moved to environment variables"
+      ]
+    },
+    {
+      "source": "gold-tracker-package/rich_db.py",
+      "source_sha256": "2608386076adef259f5be9fbb960601a139bf525a8a3c9357cd32c21d02085b1",
+      "publication_changes": []
+    },
+    {
+      "source": "gold-tracker-package/save_final_forecast.py",
+      "source_sha256": "c73f102bff69921ea0307281b66ff5ac1f9a58cdf92880263a1bb371ee34662e",
+      "publication_changes": []
+    },
+    {
+      "source": "gold-tracker-package/save_rich_forecast.py",
+      "source_sha256": "ad2ef9e46aec23589db8a34fe8b51a2de88e8f87781c1de1239c55e4c5f7766e",
+      "publication_changes": []
+    },
+    {
+      "source": "gold-tracker-package/self_improve.py",
+      "source_sha256": "d57976b5ebaacc33d31bb651fea3333446176b0aaf47666f523444ee3b26dff8",
+      "publication_changes": []
+    },
+    {
+      "source": "gold-tracker-bot/analyze.py",
+      "source_sha256": "6176ecc6b08bbf115602a83d9d85d6698bb292bd65d98c83db7eca7b997b93c2",
+      "publication_changes": []
+    },
+    {
+      "source": "gold-tracker-bot/collector.py",
+      "source_sha256": "bb9eaea42ff5e6a56a0873926acbc6b511e768b6c51ddc00b608cdf7ede3c9fe",
+      "publication_changes": []
+    },
+    {
+      "source": "gold-tracker-bot/cron_run.sh",
+      "source_sha256": "537cec01848e3a91ad83868613455e8a5433d3b8507aeddfcd1c3d3a0bf4ed73",
+      "publication_changes": []
+    },
+    {
+      "source": "gold-tracker-bot/cron_run_v2.py",
+      "source_sha256": "f404447edbfcb0ddd12b1173bca99ded2cd24e00dd73d2552b8d881e01ee75fa",
+      "publication_changes": []
+    },
+    {
+      "source": "gold-tracker-bot/daily_summary_bot.py",
+      "source_sha256": "28a071ac31ab04dba5db5db30d3c0a4f41ac5aff52472475e546bc991af59b35",
+      "publication_changes": []
+    },
+    {
+      "source": "gold-tracker-bot/finance_bot_listener.py",
+      "source_sha256": "e2b25e1ec449b3da5e31f3869115a66c01143a3a25b42169d197cedaa00a4200",
+      "publication_changes": [
+        "Bot credential moved to environment variable"
+      ]
+    },
+    {
+      "source": "gold-tracker-bot/finance_manager.py",
+      "source_sha256": "b7decff650128320323403b67560d0342b55183b759fa42a7eeb61bfb49d28af",
+      "publication_changes": []
+    },
+    {
+      "source": "gold-tracker-bot/generate_dollar_forecast.py",
+      "source_sha256": "5294f02e378f57ace270be48912e5cd37a57f31ad0f0a35f02129f308afbb49b",
+      "publication_changes": []
+    },
+    {
+      "source": "gold-tracker-bot/generate_final.py",
+      "source_sha256": "7607b78859af63199308955597e6fe6bb0ad0669f992f70e5cb1230e349f33d6",
+      "publication_changes": []
+    },
+    {
+      "source": "gold-tracker-bot/generate_forecast.py",
+      "source_sha256": "4ef4957867e8be383b631986273e7bb340f149e057bc1aaeeb3219d8f145b037",
+      "publication_changes": []
+    },
+    {
+      "source": "gold-tracker-bot/generate_report.py",
+      "source_sha256": "a452d6e4ba3c16d6700407b6ef31c691dd1c2c94bacc307d7ef0dc2f7b44e78f",
+      "publication_changes": []
+    },
+    {
+      "source": "gold-tracker-bot/json_db.py",
+      "source_sha256": "529f51dffbfe8c442ce3d1a3e9f4d22f09ab24f8e935dd1153c729fdccd6d8a9",
+      "publication_changes": []
+    },
+    {
+      "source": "gold-tracker-bot/monitor.py",
+      "source_sha256": "911132dbf94266ebd5cbd0432e80cdd407c40c67a0badeb77eb5848de4e2d899",
+      "publication_changes": []
+    },
+    {
+      "source": "gold-tracker-bot/news_scraper.py",
+      "source_sha256": "18c42ed81a1e64d247de94b660111c598794230330da7bd9d859bc541444fc2e",
+      "publication_changes": []
+    },
+    {
+      "source": "gold-tracker-bot/price_tracker.py",
+      "source_sha256": "f66f60fc88a6769f14b0a02b7b99381bf09c495dfcc2b35db24814047fa84066",
+      "publication_changes": [
+        "Credentials and channel ID moved to environment variables"
+      ]
+    },
+    {
+      "source": "gold-tracker-bot/rich_db.py",
+      "source_sha256": "2608386076adef259f5be9fbb960601a139bf525a8a3c9357cd32c21d02085b1",
+      "publication_changes": []
+    },
+    {
+      "source": "gold-tracker-bot/save_final_forecast.py",
+      "source_sha256": "c73f102bff69921ea0307281b66ff5ac1f9a58cdf92880263a1bb371ee34662e",
+      "publication_changes": []
+    },
+    {
+      "source": "gold-tracker-bot/save_rich_forecast.py",
+      "source_sha256": "ad2ef9e46aec23589db8a34fe8b51a2de88e8f87781c1de1239c55e4c5f7766e",
+      "publication_changes": []
+    },
+    {
+      "source": "gold-tracker-bot/self_improve.py",
+      "source_sha256": "d57976b5ebaacc33d31bb651fea3333446176b0aaf47666f523444ee3b26dff8",
+      "publication_changes": []
+    }
+  ],
+  "excluded": [
+    "analysis_db.json",
+    "rich_analysis_db.json",
+    "daily_prices.json",
+    "finance_db.json"
+  ]
+}
