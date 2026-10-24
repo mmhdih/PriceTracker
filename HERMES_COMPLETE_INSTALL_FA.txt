@@ -1,5 +1,7 @@
 هدف: تکمیل دو اصلاح باقی‌مانده PriceTracker، یعنی قالب مشترک با حفظ LLM و retry محدود؛ فقط در نصب فعلی /root/gold-tracker-bot و profile واقعی jobهای طلا. این متن نصب را درخواست می‌کند؛ ارسال آزمایشی، تغییر ربات‌های دیگر یا restart کل gateway در محدوده آن نیست.
 
+اگر core زیر قبلاً نصب شده ولی prompt/skills و wrapper قدیمی مانده‌اند، prepare/activate را دوباره تکرار نکن. راهنمای FINISH_EXISTING_INSTALL_FA.md و ابزار مستقل complete_hermes_install.py همین اتصال‌های باقی‌مانده را با کنترل hash نصب فعلی، بکاپ و برگشت محدود تکمیل می‌کنند. متن حاضر برای نصب کامل از نسخه قدیمی‌تر است.
+
 کد و تست‌های این بسته در commit 08ff97bb4dd41f00cb65c0cd530800a1f0b33976 منتشر شده‌اند. قبل از اجرا تأیید کن PINNED_COMMIT داخل updater دانلودشده دقیقاً همین مقدار است. URL خود updater از commit انتشارِ معرفی‌شده مالک گرفته شود؛ اسکریپت موجود با pin قدیمی برای این مرحله کافی نیست.
 
 مرجع روش و فایل‌ها: LLM_RETRY_FA.md، HERMES_LLM_JOB_PROMPT_FA.txt، ops/price-tracker-structured-analysis/SKILL.md و ops/gold-analysis-retry.py در همان commit پین‌شده‌ای که مالک برای این آپدیت معرفی کرده است. فایل updater تازه همان نسخه باید به commit دارای این دو helper اشاره کند؛ updater قدیمی /tmp را بدون بررسی دوباره استفاده نکن.

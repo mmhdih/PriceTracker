@@ -29,6 +29,10 @@ job تحلیل موجود در همان ساعت‌های تهران
 - ذخیره cycle و forecast یک تراکنش است. خروجی متن/hash/JSON به همان رکورد وصل است. تحلیل ذخیره‌شده در نوبت دوباره ساخته نمی‌شود؛ اجرای تکراری begin/finish حالت already_committed می‌دهد و prompt آن را دوباره منتشر نمی‌کند.
 - ذخیره‌شدن با تحویل‌شدن فرق دارد. delivery در ledger این پروژه not_checked می‌ماند؛ فقط Hermes/رسید واقعی می‌تواند تحویل را ثابت کند.
 
+## تکمیل نصب موجود
+
+اگر core این بسته نصب شده ولی prompt/skill و watcher قبلی حفظ شده‌اند، فقط [تکمیل اتصال‌های نصب فعلی](FINISH_EXISTING_INSTALL_FA.md) را انجام دهید؛ اجرای دوباره updater این اتصال‌ها را به‌تنهایی فعال نمی‌کند. ابزار مستقل از CLI رسمی Hermes استفاده می‌کند و اجرای تست یا پیام نمی‌فرستد.
+
 ## سیاست retry
 
 فایل [retry_watcher.py](retry_watcher.py) به‌طور پیش‌فرض فقط بررسی می‌کند و CLI را فراخوانی نمی‌کند. configure یک‌بار، profile واقعی و ID همان job را در metadata دیتابیس خصوصی پروژه ثبت می‌کند؛ در GitHub مقدار ID/چت قرار نمی‌گیرد. wrapper [ops/gold-analysis-retry.py](ops/gold-analysis-retry.py) فقط helper مدیریت‌شده را با --apply اجرا می‌کند؛ profile/ID ثابت یا flag در /tmp ندارد.

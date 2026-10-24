@@ -2,6 +2,7 @@
 
 ## راهنمای فارسی و بررسی توسط Hermes
 
+- [تکمیل نصب فعلیِ آپدیت‌شده: اتصال prompt، skill و watcher، بدون آپدیت دوباره](FINISH_EXISTING_INSTALL_FA.md)
 - [دستور نصب یکپارچه کد، prompt، skill و watcher برای Hermes](HERMES_COMPLETE_INSTALL_FA.txt)
 - [اتصال تحلیل LLM به قالب مشترک و اصلاح retry با تست‌های آفلاین](LLM_RETRY_FA.md)
 - [prompt جدید تحلیل ساختاریافته Hermes](HERMES_LLM_JOB_PROMPT_FA.txt)
