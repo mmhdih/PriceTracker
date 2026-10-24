@@ -73,3 +73,21 @@ python3 /root/gold-tracker-bot/rich_db.py
 ## آزمون انجام‌شده
 
 دو آزمون جدید، خود فرمان CLI را در subprocess و با SQLite خصوصی اجرا می‌کنند: ارزیابی مستقل هر سه افق، عدم ساخت observation/تحلیل، حفظ حالت بدون مشاهده، ثابت ماندن نتیجه معتبر در اجرای تکراری و عدم ارزیابی هنگام import/API خواندن. کل مجموعه روی Windows: ۴۰ تست موفق از ۴۲؛ دو تست symlink مخصوص Linux رد نشده‌اند، بلکه skip شده‌اند. Linux CI باید جدا بررسی شود. هیچ پیام شبکه‌ای یا دسترسی VPS در این آزمون‌ها انجام نشده است.
+
+## اگر terminal داخل Hermes فرمان را با lifecycle guard مسدود کرد
+
+مالک گزارش کرده prepare در ابزار Hermes پیش از اجرای اسکریپت با پیام lifecycle guard مسدود شده است. لاگ خام و نسخه دقیق guard نصب‌شده در دسترس workspace نبوده؛ علت دقیق این نصب تأیید نشده است. `set -Eeuo pipefail` تنظیم مدیریت خطای Bash است، نه فرمان توقف/restart. در updater منتشرشده هیچ فرمان مدیریت gateway وجود ندارد؛ از این خطا نیاز به restart کردن Hermes نتیجه نمی‌شود.
+
+[کد رسمی guard](https://github.com/NousResearch/hermes-agent/blob/main/cron/lifecycle_guard.py) فرمان و اسکریپت‌های ارجاع‌شده را بررسی می‌کند. [گزارش خطای رسمی درباره اسکن اسکریپت عادی](https://github.com/NousResearch/hermes-agent/issues/105758) نیز وجود دارد، اما اثبات علت خاص این سرور نیست. نسخه نصب‌شده ممکن است با main رسمی فرق داشته باشد. برای تشخیص دقیق‌تر، نسخه/commit Hermes و خطای خام و هش updater از همان اجرا لازم است؛ توضیح مدل به‌تنهایی لاگ نیست.
+
+در این وضعیت guard یا گزینه‌های مدیریت خطا را حذف/تغییر ندهید و برای ادامه gateway را restart نکنید. مالک می‌تواند از اتصال SSH عادی خود، خارج از ابزار agent، همین updater مشخص و بررسی‌شده را اجرا کند. مرحله زیر فقط prepare است؛ روی نصب فعال یا برنامه زمانی تغییری نمی‌دهد:
+
+```bash
+curl -fL https://raw.githubusercontent.com/mmhdih/PriceTracker/69687c56f7917a05341b33256b5303015a9c2682/safe_update.sh \
+  -o /tmp/price-tracker-update.sh &&
+bash /tmp/price-tracker-update.sh prepare --live-dir /root/gold-tracker-bot
+```
+
+تا زمانی که پیام واقعی `PREPARED` و فایل وضعیت آماده ایجاد نشده‌اند، activate اجرا نشود. قبل از prepare لازم نیست چهار job فعال pause شوند. پس از موفقیت prepare، برای فعال‌سازی همان روال توقف کوتاه و واقعی jobهای طلا، بکاپ، activate و بررسی بالا لازم است؛ اجرای prepare از SSH جای آن مراحل را نمی‌گیرد. کل cron یا gateway متوقف نشود.
+
+اگر همین فرمان در SSH عادی خطا داد، stdout/stderr و exit code واقعی همان مرحله با حذف مقادیر حساس بررسی شوند؛ علت را به حدس به Hermes نسبت ندهید. اگر prepare اصلاً اجرا نشده یا متوقف شده است، نسخه ارزیاب جدید هم هنوز فعال نیست؛ نبود `evaluation_run` در خروجی نسخه قبلی طبیعی است. updater را در خود نسخه فعال دستکاری نکنید.
