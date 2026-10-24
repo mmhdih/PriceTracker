@@ -43,5 +43,24 @@ def evaluate_forecasts(db, current_prices, observed_at=None):
 def get_performance_stats(db, horizon='24h'):
     return performance(db, horizon)
 
+def main():
+    """Refresh due outcomes from stored quotes before the cron prompt reads stats.
+
+    Importing this module and calling the compatibility read APIs do not evaluate.
+    The CLI sends nothing and neither collects quotes nor creates a forecast.
+    """
+    store = get_store()
+    checked_at = now_iso()
+    store.evaluate(checked_at)
+    db = store.export()
+    # Keep the legacy flat 24h fields; expose all horizons from the same export.
+    stats = get_performance_stats(db)
+    stats['by_horizon'] = {h: get_performance_stats(db, h) for h in ('4h', '24h', '1w')}
+    stats['evaluation_run'] = {'performed': True, 'checked_at': checked_at,
+                               'source': 'stored-observations'}
+    print(json.dumps(stats, ensure_ascii=False, indent=2))
+    return 0
+
+
 if __name__ == '__main__':
-    print(json.dumps(get_performance_stats(load_db()), ensure_ascii=False, indent=2))
+    raise SystemExit(main())
