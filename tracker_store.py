@@ -25,6 +25,8 @@ class Store:
                 CREATE TABLE IF NOT EXISTS evaluations(forecast_id TEXT NOT NULL, horizon TEXT NOT NULL, payload TEXT NOT NULL, PRIMARY KEY(forecast_id,horizon), FOREIGN KEY(forecast_id) REFERENCES forecasts(id));
                 CREATE TABLE IF NOT EXISTS imports(source TEXT NOT NULL, row_key TEXT NOT NULL, payload TEXT NOT NULL, PRIMARY KEY(source,row_key));
                 CREATE TABLE IF NOT EXISTS metadata(key TEXT PRIMARY KEY, value TEXT NOT NULL);
+                CREATE TABLE IF NOT EXISTS analysis_cycles(id TEXT PRIMARY KEY, payload TEXT NOT NULL);
+                CREATE TABLE IF NOT EXISTS retry_claims(id TEXT PRIMARY KEY, payload TEXT NOT NULL);
                 CREATE INDEX IF NOT EXISTS observations_asset_time ON observations(asset,timestamp);
                 CREATE INDEX IF NOT EXISTS forecasts_issue_time ON forecasts(timestamp);
             ''')

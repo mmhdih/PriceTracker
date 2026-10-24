@@ -76,7 +76,8 @@ def normalize_forecast(raw):
     snap = dict(snap)
     snap['prices'] = prices(snap.get('prices', {}))
     ts = timestamp(raw['timestamp']).isoformat()
-    ranges = explicit_ranges(text)
+    # Own structured models must not invent extra horizons by parsing prose/news.
+    ranges = {} if raw.get('model_version') in ('hermes-analyst-v1', 'log-return-baseline-v1') else explicit_ranges(text)
     supplied = raw.get('predicted_ranges') or {}
     for old, new in [('predicted_4h', '4h'), ('predicted_24h', '24h')]:
         if raw.get(old):
@@ -114,4 +115,6 @@ def normalize_forecast(raw):
             'predicted_ranges': ranges, 'predicted_direction': ranges.get('24h', {}).get('direction'),
             'buy_signal': signal, 'confidence': raw.get('confidence'), 'reasoning': raw.get('reasoning', ''),
             'model_version': raw.get('model_version', 'legacy-unverified'),
+            'analyst': raw.get('analyst'), 'cycle_id': raw.get('cycle_id'),
+            'bundle_sha256': raw.get('bundle_sha256'),
             'evaluation': None, 'evaluations': {}, 'legacy_evaluation': raw.get('legacy_evaluation', raw.get('evaluation'))}

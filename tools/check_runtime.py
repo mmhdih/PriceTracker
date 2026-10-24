@@ -30,6 +30,17 @@ def collect_health(live_dir, now=None):
         observations=con.execute('SELECT COUNT(*) FROM observations').fetchone()[0]
         observation_times=con.execute('SELECT COUNT(DISTINCT timestamp) FROM observations').fetchone()[0]
         last={asset:ts for asset,ts in con.execute('SELECT asset,MAX(timestamp) FROM observations GROUP BY asset')}
+        tables={r[0] for r in con.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+        cycle_rows=[json.loads(r[0]) for r in con.execute('SELECT payload FROM analysis_cycles')] if 'analysis_cycles' in tables else []
+        retry_rows=[json.loads(r[0]) for r in con.execute('SELECT payload FROM retry_claims')] if 'retry_claims' in tables else []
+        newest_cycle=max(cycle_rows,key=lambda r:r.get('created_at',''),default={})
+        newest_retry=max(retry_rows,key=lambda r:r.get('claimed_at',''),default={})
+        integration={'schema_supported': {'analysis_cycles','retry_claims'} <= tables,
+                     'cycles_total':len(cycle_rows),
+                     'cycles_committed':sum(r.get('state')=='committed' for r in cycle_rows),
+                     'latest_cycle':{k:newest_cycle[k] for k in ('id','state','forecast_id','created_at','committed_at','text_sha256','delivery') if k in newest_cycle},
+                     'retry_claims_total':len(retry_rows),
+                     'latest_retry':{k:newest_retry[k] for k in ('state','claimed_at','returncode') if k in newest_retry}}
     metrics={}
     for horizon,hours in HORIZONS.items():
         states={'scored':0,'not_due':0,'due_not_processed':0,'missing_observation':0,'unscorable':0,'other':0}
@@ -61,6 +72,7 @@ def collect_health(live_dir, now=None):
             'database':str(database),'sqlite_check':integrity,'all_unique_forecasts':len(records),
             'stored_observation_prices':observations,'observation_timestamps':observation_times,
             'last_observation_by_asset':last,'metrics_by_horizon':metrics,
+            'structured_integration':integration,
             'scheduler_checked':False,'telegram_delivery_checked':False,
             'note':'Observation timestamps prove recording time, not the market source last-trade time. No writes or messages were performed.'}
 

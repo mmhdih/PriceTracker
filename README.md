@@ -2,6 +2,9 @@
 
 ## راهنمای فارسی و بررسی توسط Hermes
 
+- [دستور نصب یکپارچه کد، prompt، skill و watcher برای Hermes](HERMES_COMPLETE_INSTALL_FA.txt)
+- [اتصال تحلیل LLM به قالب مشترک و اصلاح retry با تست‌های آفلاین](LLM_RETRY_FA.md)
+- [prompt جدید تحلیل ساختاریافته Hermes](HERMES_LLM_JOB_PROMPT_FA.txt)
 - [متن آماده اصلاح ساعت دو job طلا برای scheduler فعلی UTC، مطابق برنامه تهران](HERMES_TIMEZONE_FIX_FA.txt)
 - [اصلاح واقعی ارزیابی در دستور فعلی rich_db.py، با حفظ تحلیل LLM](EVALUATOR_FIX_FA.md)
 - [راهنمای اصلی: معماری، نصب، ادغام، شمارنده و حدود تأیید سلامت](OPERATIONS_FA.md)
@@ -67,6 +70,8 @@ The workspace agent did not directly access the VPS. The owner subsequently supp
 
 [safe_update.sh](safe_update.sh) prepares the pinned reviewed release in an isolated venv, tests it, merges a data copy, and supports guarded activation, rollback and interrupted-switch recovery. Default mode is **prepare only**. It never stops unrelated services or sends a Telegram test message. Activation requires the operator to pause the gold schedulers/services and pass `--quiesced`; it also refuses to switch while recognized project processes are running. Existing script paths, bot credentials and `/tmp` output paths are preserved through private compatibility launchers.
 
-Read [SAFE_UPDATE_FA.md](SAFE_UPDATE_FA.md) for exact commands and limits. Eleven updater tests, two private-inspection tests, two read-only health-check tests and two evaluator CLI tests supplement the 25 core tests. On this Windows workspace 40 passed and two directory-symlink tests were skipped; Linux CI is configured to run those and check Bash syntax. The owner reported earlier production activation; installation of the latest evaluator fix is not yet verified, and the workspace agent did not access the VPS directly.
+Read [SAFE_UPDATE_FA.md](SAFE_UPDATE_FA.md) for exact commands and limits. Eleven updater tests, two private-inspection tests, three read-only health-check tests and two evaluator CLI tests supplement the 25 core tests. The owner supplied successful evaluator-fix activation and a real performed=true report with 340 unique forecasts. The workspace agent did not access the VPS directly; installation of the newer structured LLM/retry integration is not yet verified.
+
+The structured Hermes integration adds eight cycle/renderer tests and nine retry tests: 58 passed out of 60 on Windows, with the same two Linux-only symlink tests skipped. Linux CI is configured separately. `analysis_cycles.py` binds LLM JSON to a durable input bundle and one scheduled slot, uses the shared renderer, and commits the forecast and cycle together. `retry_watcher.py` defaults to inspection, reads only the verified Hermes ledger, and permits at most one pre-commit retry request per slot. Adopt the new prompt/skill and watcher wrapper as well as the code; merely updating Python does not change existing Hermes jobs. It does not claim exactly-once Telegram delivery.
 
 The server-specific `gen_forecast_script.py` now uses the common pipeline; its original fixed report is replaced by data-derived output. The updater also preserves the confirmed `final_forecast_output.txt` file at its original path.

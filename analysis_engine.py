@@ -77,10 +77,19 @@ def fmt(value, decimals=0):
     return f'{value:,.{decimals}f}'.translate(str.maketrans('0123456789,', '۰۱۲۳۴۵۶۷۸۹،'))
 
 
+def plain(value):
+    """News and model prose are display data, never cron control markers."""
+    value = ' '.join(str(value).split())
+    return value.replace('[SILENT]', '［SILENT］').replace('[CRON_FAILURE]', '［CRON_FAILURE］')
+
+
 def render(record, db):
     snap = record['snapshot']
     p = snap['prices']
     dt = jdatetime.datetime.fromgregorian(datetime=timestamp(record['timestamp'])).strftime('%Y/%m/%d %H:%M')
+    dt = dt.translate(str.maketrans('0123456789', '۰۱۲۳۴۵۶۷۸۹'))
+    analyst = record.get('analyst') or {}
+    is_analyst = record.get('model_version') == 'hermes-analyst-v1'
     lines = ['📊 تحلیل بازار طلا و ارز', '🕒 '+dt+' — تهران', '', '۱. قیمت و تغییر روزانه']
     for asset,(label,unit) in ASSETS.items():
         value = p.get(asset)
@@ -103,37 +112,54 @@ def render(record, db):
         if ma:
             relation = 'بالاتر' if p[record['asset']] > ma else 'پایین‌تر' if p[record['asset']] < ma else 'برابر'
             lines.append(f'• MA{period}: {fmt(ma)} تومان؛ قیمت {relation} از میانگین')
+    if analyst.get('technical_summary'):
+        lines.append('• برداشت تحلیل‌گر: '+plain(analyst['technical_summary']))
     lines += ['', '۳. حباب نسبت به ارزش ذاتی']
     bubble = snap.get('hobab',{}).get('geram18_hobab_pct')
     lines.append(f'• طلای ۱۸ عیار: {bubble:+.2f}٪' if isinstance(bubble,(int,float)) else '• داده کافی موجود نیست')
+    if analyst.get('bubble_summary'):
+        lines.append('• برداشت تحلیل‌گر: '+plain(analyst['bubble_summary']))
     lines += ['', '۴. اخبار دریافت‌شده']
     news = []
     for source,posts in snap.get('news',{}).items():
         for post in posts[-2:]:
-            headline = ' '.join(str(post).split())[:110]
+            headline = plain(post)[:110]
             if headline and headline not in [x[1] for x in news]:
-                news.append((source,headline))
+                news.append((plain(source)[:40],headline))
     lines.extend([f'• @{source}: {headline}' for source,headline in news[:3]] or ['• خبری دریافت نشده است'])
     if news:
         lines.append('• نقل منبع؛ اثر جهت‌دار خبر و تازگی زمان انتشار تأیید نشده است.')
-    lines += ['', f'۵. برآورد آماری قیمت پایانی — {ASSETS[record["asset"]][0]}']
+    if analyst.get('news_summary'):
+        lines.append('• برداشت تحلیل‌گر از خبرها: '+plain(analyst['news_summary']))
+    lines += ['', f'۵. برآورد قیمت پایانی — {ASSETS[record["asset"]][0]}']
+    lines.append('• روش: تحلیل هوش مصنوعی' if is_analyst else '• روش: برآورد آماری')
     for horizon,label in [('4h','۴ ساعته'),('24h','۲۴ ساعته'),('1w','۱ هفته‌ای')]:
         bounds = record['predicted_ranges'].get(horizon)
         lines.append(f'• {label}: {bounds["direction"]} | {fmt(bounds["min"])} تا {fmt(bounds["max"])} تومان'
-                     if bounds else f'• {label}: داده تاریخی کافی موجود نیست')
-    lines += ['• برآورد آزمایشی؛ این بازه سطح اطمینان کالیبره‌شده ندارد.',
-              '', '۶. تصمیم خرید و ریسک', '• سیگنال خرید خودکار صادر نشده؛ تصمیم نیازمند بررسی مستقل است.',
-              '• ریسک: خطای منبع، داده قدیمی و تغییر ناگهانی بازار.', '', '۷. عملکرد ارزیابی معتبر']
+                     if bounds else f'• {label}: '+('شواهد کافی برای برآورد موجود نیست' if is_analyst else 'داده تاریخی کافی موجود نیست'))
+    lines += ['• برآورد آزمایشی؛ این بازه سطح اطمینان کالیبره‌شده ندارد.', '', '۶. تصمیم خرید و ریسک']
+    signals = {'BUY': 'خرید', 'STRONG_BUY': 'تمایل قوی به خرید', 'WAIT': 'انتظار', 'STRONG_WAIT': 'تمایل قوی به انتظار'}
+    if is_analyst and record.get('buy_signal') in signals:
+        lines.append('• نظر تحلیل‌گر: '+signals[record['buy_signal']]+'؛ نیازمند بررسی مستقل.')
+    else:
+        lines.append('• سیگنال خرید خودکار صادر نشده؛ تصمیم نیازمند بررسی مستقل است.')
+    if is_analyst and record.get('confidence') is not None:
+        lines.append('• اطمینان ذهنی مدل: '+fmt(record['confidence'])+' از ۱۰۰؛ احتمال موفقیت کالیبره‌شده نیست.')
+    if analyst.get('reasoning'):
+        lines.append('• دلیل: '+plain(analyst['reasoning']))
+    lines.append('• ریسک: خطای منبع، داده قدیمی و تغییر ناگهانی بازار.')
+    lines.extend('• ریسک تحلیل‌گر: '+plain(r) for r in analyst.get('risks', []))
+    lines += ['', '۷. عملکرد ارزیابی معتبر']
     lines.append(f'• تعداد کل تحلیل‌های یکتا: {fmt(len(db.get("forecasts", [])))}')
     for horizon,label in [('4h','۴ ساعت'),('24h','۲۴ ساعت'),('1w','۱ هفته')]:
         stats = performance(db,horizon)
         if stats['total']:
-            lines.append(f'• {label}: {stats["wins"]} برد از {stats["total"]} | دقت جهت {stats["win_rate"]}٪ | بدون نتیجه: {stats["unscored"]}')
+            lines.append(f'• {label}: {fmt(stats["wins"])} برد از {fmt(stats["total"])} | دقت جهت {fmt(stats["win_rate"],1)}٪ | بدون نتیجه: {fmt(stats["unscored"])}')
         else:
-            lines.append(f'• {label}: ارزیابی معتبر کافی نیست | بدون نتیجه: {stats["unscored"]}')
+            lines.append(f'• {label}: ارزیابی معتبر کافی نیست | بدون نتیجه: {fmt(stats["unscored"])}')
     lines.append('• نتایج قدیمی ناسازگار در آرشیو محفوظ‌اند و در این آمار شمرده نمی‌شوند.')
     text = '\n'.join(lines)
     # Telegram sendMessage has a 4096-character limit; preserve all sections.
-    if len(text) > 4000:
+    if len(text.encode('utf-16-le')) // 2 > 4000:
         raise ValueError('Analysis exceeds Telegram message limit')
     return text

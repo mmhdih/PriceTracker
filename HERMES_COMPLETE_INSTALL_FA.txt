@@ -1,0 +1,37 @@
+هدف: تکمیل دو اصلاح باقی‌مانده PriceTracker، یعنی قالب مشترک با حفظ LLM و retry محدود؛ فقط در نصب فعلی /root/gold-tracker-bot و profile واقعی jobهای طلا. این متن نصب را درخواست می‌کند؛ ارسال آزمایشی، تغییر ربات‌های دیگر یا restart کل gateway در محدوده آن نیست.
+
+مرجع روش و فایل‌ها: LLM_RETRY_FA.md، HERMES_LLM_JOB_PROMPT_FA.txt، ops/price-tracker-structured-analysis/SKILL.md و ops/gold-analysis-retry.py در همان commit پین‌شده‌ای که مالک برای این آپدیت معرفی کرده است. فایل updater تازه همان نسخه باید به commit دارای این دو helper اشاره کند؛ updater قدیمی /tmp را بدون بررسی دوباره استفاده نکن.
+
+مرحله ۱ ـ پیش‌نیاز و بکاپ خصوصی، بدون ارسال
+۱. نسخه واقعی Hermes، profile، نام/ID دو job تحلیل و watcher، مسیر مطلق wrapper watcher و وضعیت هر چهار job طلا را از نصب پیدا کن. scheduleهای تحلیل و خلاصه قبلاً برای scheduler UTC به‌ترتیب 0 3,6,8,11,14,17 * * * و 0 17 * * * اصلاح شده‌اند؛ این‌ها را دوباره جابه‌جا نکن.
+۲. پشتیبانی واقعی نسخه نصب‌شده از markerهای [CRON_FAILURE] و [SILENT]، schema executions و ابزار رسمی job management را از help/source همان نصب تأیید کن. صرف وجود آن‌ها در مستندات آنلاین کافی نیست. اگر نسخه ناسازگار است، گارد را تغییر نده و gateway را برای رفع آن restart/update نکن؛ ناسازگاری مشخص را گزارش بده. نسخه قدیمی و jobهای فعال را در این مرحله دست‌نخورده بگذار.
+۳. از config کامل فقط دو job تحلیل/watcher، فایل واقعی wrapper watcher و تنظیمات حالت فعال هر چهار job بکاپ خصوصی بگیر. محتوای secret یا شناسه چت را چاپ/منتشر نکن. skill قدیمی را حذف یا بازنویسی نکن.
+
+مرحله ۲ ـ کد با همان updater برگشت‌پذیر
+۴. updater پین‌شده معرفی‌شده مالک را خارج از پروژه دریافت و prepare کن:
+bash /tmp/price-tracker-update.sh prepare --live-dir /root/gold-tracker-bot
+اگر lifecycle guard ابزار terminal فرمان را مسدود کرد، آن را دور نزن، pipefail را حذف نکن و gateway را restart نکن؛ مرحله را متوقف و همان فرمان را برای اجرای مالک در SSH عادی مشخص کن. خطای خام را با تفسیر حدسی جایگزین نکن. پس از PREPARED ادامه بده.
+۵. فقط jobهای طلا که اکنون فعال‌اند را برای این تعویض موقتاً pause کن؛ چهار job اعلام‌شده تحلیل، tracker، retry و خلاصه‌اند. پایان اجرای مرتبط را تأیید کن. وضعیت قبلی را حفظ کن تا jobی که از قبل عمداً paused بوده خودسرانه resume نشود.
+۶. فعال‌سازی با بکاپ تازه:
+bash /tmp/price-tracker-update.sh activate --quiesced --live-dir /root/gold-tracker-bot
+quiesced فقط پس از توقف واقعی نویسنده‌ها مجاز است. در STOPPED SAFELY یا خطا ادامه نده؛ status و لاگ خصوصی را بخوان. هیچ داده، بکاپ یا credential حذف نشود. روش rollback/recover همان SAFE_UPDATE_FA.md است.
+
+مرحله ۳ ـ اتصال گردش جدید در همان توقف کوتاه
+۷. skill جدید price-tracker-structured-analysis را با فایل دقیق repo در skills همان profile نصب کن و با ابزار skills نصب را تأیید کن. مسیر استاندارد زیر HERMES_HOME/skills است؛ profile صحیح را از مرحله ۱ بگیر، نه با حدس. اگر skill هم‌نام از قبل وجود دارد، نخست hash/version و بکاپ خصوصی‌اش را بررسی کن. skill قدیمی gold-price-history-analysis در جای خود باقی بماند و به مصرف‌کنندگان دیگر دست نزن.
+۸. فقط job تحلیل موجود را با ابزار رسمی مدیریت job ویرایش کن: prompt دقیق HERMES_LLM_JOB_PROMPT_FA.txt و skills فقط شامل price-tracker-structured-analysis شوند. schedule UTC اصلاح‌شده، deliver=origin، همان مقصد قبلی و سایر تنظیمات نامرتبط حفظ شوند. هنوز job paused بماند. هیچ job جدید نساز و jobs.json/executions.db را مستقیم ویرایش نکن.
+۹. watcher جدید را علیه profile/ID واقعی پیکربندی کن:
+python3 /root/gold-tracker-bot/retry_watcher.py --configure --hermes-home ACTUAL_HERMES_HOME --job-id ACTUAL_ANALYSIS_JOB_ID
+دو مقدار ACTUAL را از مرحله ۱ جایگزین کن؛ placeholder را عیناً اجرا نکن. این فرمان نام job، prompt پروتکل جدید، schedule و schema واقعی را بررسی و فقط config خصوصی همین پروژه را ذخیره می‌کند. هیچ retry یا پیام نمی‌فرستد. اگر رفض کرد، schema یا شرط را حذف نکن؛ تا رفع ناسازگاری watcher جدید resume نشود.
+۱۰. فقط فایل wrapper واقعی همان job gold-analysis-retry-watcher را، بعد از بکاپ و با نوشتن اتمیک و مالکیت/دسترسی مناسب، با محتوای دقیق ops/gold-analysis-retry.py جایگزین کن. مسیر script در job را حفظ کن. این wrapper به helper مدیریت‌شده اشاره دارد و ID/flag قدیمی را استفاده نمی‌کند. فایل flag قبلی یا بکاپ را حذف نکن؛ کد جدید آن را نمی‌خواند. deliver watcher همان local، no_agent و schedule هر پنج دقیقه حفظ شوند.
+
+مرحله ۴ ـ بررسی بدون اجرا/انتشار واقعی تحلیل
+۱۱. در پایان توقف کوتاه، یک بار rich_db.py را اجرا و evaluation_run/performed و by_horizon را بررسی کن؛ تعداد تحلیل‌ها نباید با این فرمان افزایش پیدا کند. ابزار read-only جدید check_runtime.py هم روی SQLite فعال ok و structured_integration.schema_supported=true بدهد. تا پیش از اجرای نخست، cycles_total=0 طبیعی است؛ از آن شکست مدل یا تحویل نتیجه نگیر.
+۱۲. retry_watcher.py را بدون --apply اجرا کن؛ در حالت paused، انتظار skip با job_not_enabled طبیعی است. بعد از resume هم dry-run بدون --apply فقط بررسی می‌کند. خروج schema/config error پذیرفته نیست؛ action=review به معنی نیاز به بررسی است، نه سلامت کامل. کدهای ۱ و ۲ را با موفقیت اشتباه نگیر.
+۱۳. sourceهای Python wrapper و helper و metadata skill را بدون اجرای job تحلیل اعتبارسنجی کن. هیچ analysis_cycles.py begin واقعی، --apply دستی، hermes cron run یا ابزار ارسال را برای تست فراخوانی نکن. تست آفلاین کد را updater در داده خصوصی انجام داده است؛ fixtureهای آن وارد دیتابیس واقعی نشوند.
+۱۴. config دو job را دوباره بخوان و diff غیرحساس بده؛ فقط prompt/skills تحلیل و محتوای wrapper watcher تغییرات برنامه‌ریزی‌شده‌اند. schedule، deliver، مقصد و تعداد jobها ثابت باشند. سپس فقط jobهایی که برای همین نصب موقتاً pause شدند به وضعیت فعال قبلی برگردند. برای این کار منتظر تأیید دیگری از مالک نمان مگر خطا یا ناسازگاری واقعی وجود داشته باشد. توقف ثبت قیمت کوتاه نگه داشته شود؛ داده ازدست‌رفته با عدد حدسی پر نشود.
+
+اگر در نصب اتصال جدید خطا رخ داد: دو job تحلیل/watcher را در حالت امن نگه دار، config و wrapper قبلی‌شان را از بکاپ با روش رسمی برگردان؛ یا اگر نیاز به rollback کد است همان روال updater را با توقف واقعی نویسنده‌ها انجام بده. قبل از resume، سازگاری prompt/wrapper با نسخه کد فعال را تأیید کن. tracker و خلاصه را پس از تعیین ثبات نسخه، مطابق وضعیت قبلی بازگردان. چیزی را گسترده restart یا از روی JSON خصوصی restore مستقیم نکن.
+
+مرحله ۵ ـ شاهد چرخه عادی
+۱۵. اگر نخستین اجرای عادی پس از نصب در زمان بررسی رخ داده، بدون trigger تازه شواهد آن را بخوان: cycle_id، forecast_id، خروج موفق begin/finish، hash متن، قالب هفت‌بخشی و نتیجه تحویل Hermes در مقصد قبلی. نسخه تازه check_runtime.py بخش structured_integration با آخرین cycle/claim را بدون bundle، متن خصوصی یا لاگ CLI نشان می‌دهد؛ latest_cycle.delivery=not_checked یعنی ابزار پروژه تحویل را بررسی نکرده است. صرف committed یا کد صفر CLI به معنی delivered نیست. اگر زمان اجرای بعدی هنوز نرسیده یا رسید در دسترس نیست، دقیقاً «اجرای عادی/تحویل هنوز مشاهده نشده» بنویس؛ نتیجه نساز و مانیتور/cron جدید ایجاد نکن.
+۱۶. گزارش نهایی شامل commit/release فعال، تغییرات واقعی، نتایج بررسی، وضعیت هر چهار job و زمان اجرای آینده به تهران، نقص‌های واقعی باقی‌مانده و مسیر خصوصی بکاپ باشد. credential، prompt خام دارای secret، message_id ساختگی یا آمار بازنویسی‌شده منتشر نکن.
