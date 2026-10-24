@@ -25,7 +25,7 @@ import urllib.request
 import uuid
 import zipfile
 
-PINNED_COMMIT = '6fbcd721bf2ae9d1aa99dac36120d4b839197f38'
+PINNED_COMMIT = 'e58e0b0844307266521c2f1669d029b8a011ab99'
 JSON_NAMES = ('analysis_db.json', 'rich_analysis_db.json', 'daily_prices.json', 'finance_db.json')
 SECRET_NAMES = ('TELEGRAM_BOT_TOKEN', 'TELEGRAM_CHAT_ID', 'FINANCE_BOT_TOKEN')
 
